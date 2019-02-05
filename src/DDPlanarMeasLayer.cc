@@ -69,7 +69,14 @@ DDPlanarMeasLayer::DDPlanarMeasLayer(dd4hep::rec::ISurface* surf, Double_t   Bz,
     // this direction would have to be rotated into the local system of the volume
     // but we don't have access to the worlTransfrom matrix here, so
     // for now we use the y-axis ( works for Traps and Tubs )
-    dd4hep::rec::Vector3D oR( 0. , 1. , 0 );
+    
+    auto oR = std::string(vol->GetShape()->ClassName()) == "TGeoTrd2" ? 
+      dd4hep::rec::Vector3D(0., 0., 1): // "Trapezoids"
+      dd4hep::rec::Vector3D(0., 1., 0); // everything else
+
+
+    dd4hep::rec::Vector3D oX( 1. , 0. , 0 );
+    dd4hep::rec::Vector3D oZ( 0. , 0. , 1 );
 
     double dist_r = 0. ;
 
@@ -90,11 +97,31 @@ DDPlanarMeasLayer::DDPlanarMeasLayer(dd4hep::rec::ISurface* surf, Double_t   Bz,
     // vol->GetShape()->Dump() ;
     
     double rMax = o.rho() + std::abs( dist_r ) ;
-
-
     fSortingPolicy =  rMax/dd4hep::mm + epsilon * count++ ;
 
+    if(surf->id() == 0 and std::fabs(o.z()) < 1.320000e+01){
+      std::cout << "fSortingPolicy: "
+		<< surf->id()
+		<< "  " << o.z()
+		<< "  " << vol->GetShape()->GetName()
+		<< "  " << vol->GetShape()->ClassName()
+		<< std::setw(13) << rMax
+		<< std::setw(13) << dist_r
+		<< std::setw(13) << epsilon
+		<< std::setw(13) << count
+		<<  "  " << oL
+		<<  "  " << oR
+		<< std::setw(13) << vol->GetShape()->DistFromInside( const_cast<double*> ( oL.const_array() ) ,
+								     const_cast<double*> ( oX.const_array() ) )
+		<< std::setw(13) << vol->GetShape()->DistFromInside( const_cast<double*> ( oL.const_array() ) ,
+								     const_cast<double*> ( oZ.const_array() ) )
 
+		<< std::endl;
+      fSortingPolicy = 80.0 + epsilon * count++;
+    } else {
+      fSortingPolicy =  rMax/dd4hep::mm + epsilon * count++ ;
+    }
+    
   } else{
 
     fSortingPolicy =  surf->distance( dd4hep::rec::Vector3D( 0.,0.,0.) )/dd4hep::mm   +  epsilon * count++ ;
